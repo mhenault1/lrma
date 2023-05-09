@@ -1,0 +1,22 @@
+
+from pandas import read_csv
+ns = read_csv('/mnt/HDD3/lrma/script/ns_subg.csv', index_col=0)
+
+# define functions for use as input/params
+def get_subg(S):
+    return [f'/home/mathieu/paradoxus_nanopore/MA_parents/assemblies/{ns.loc[s,"subg"]}.chromosomes.fasta' for s in S]
+
+rule all:
+    input:
+        expand('/mnt/HDD3/lrma/minimap_ref/{s}/{s}.sorted.bam', s=ns.index)
+
+rule minimap:
+    input:
+        draft = '/mnt/HDD3/lrma/wtdbg2/{s}/{s}.cns.fa'
+    params:
+        ref = get_subg
+    output:
+        '/mnt/HDD3/lrma/minimap_ref/{s}/{s}.sorted.bam'
+    shell:
+        'minimap2 -a -x asm5 --cs -r2k {params.ref} {input.draft} | samtools sort -T {wildcards.s}.tmp -o {output}; '
+        'samtools index {output}'

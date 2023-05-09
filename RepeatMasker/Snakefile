@@ -1,0 +1,41 @@
+from pandas import read_csv
+
+ns = read_csv('/mnt/HDD3/lrma/script/ns_subg.csv', index_col=0)
+ns = ns.loc[ns['identity_filter']]
+
+def get_lib(S):
+    L = []
+    for s in S:
+        if ns.loc[s, 'cross'] in ['BSc1', 'BSc2']:
+            L.append('/mnt/HDD3/lrma/RepeatMasker/lib.fasta')
+        else:
+            L.append('/mnt/HDD3/lrma/RepeatMasker/lib_Sp.fasta')
+    return(L)
+
+rule all:
+    input:
+        expand('/mnt/HDD3/lrma/RepeatMasker/{s}/REannotate_output/consensus.fasta.REannotated', s=ns.index)
+
+rule repeatmasker:
+    input:
+        polished='/mnt/HDD3/lrma/medaka/{s}/consensus.fasta'
+    params:
+        lib = get_lib,
+        dir = '/mnt/HDD3/lrma/RepeatMasker/{s}'
+    output:
+        '/mnt/HDD3/lrma/RepeatMasker/{s}/consensus.fasta.out'
+    shell:
+        'if [ ! -d {params.dir} ]; then mkdir  {params.dir}; fi; '
+        'RepeatMasker -pa 1 -s -nolow -no_is -lib {params.lib} -gccalc -dir {params.dir} -gff {input.polished}'
+
+rule reannotate:
+    input:
+        out='/mnt/HDD3/lrma/RepeatMasker/{s}/consensus.fasta.out'
+    params:
+        fuzzy = '/mnt/HDD1/paradoxus_nanopore/paradoxus4/db/ty1-ty2_LTRs_fuzzy.txt',
+        out = '{s}.final.fasta.out'
+    output:
+        '/mnt/HDD3/lrma/RepeatMasker/{s}/REannotate_output/consensus.fasta.REannotated'
+    shell:
+        'cd /mnt/HDD3/lrma/RepeatMasker/{wildcards.s}/; '
+        'REannotate -n -s 15000 -d 10000 -f {params.fuzzy} {input.out}'

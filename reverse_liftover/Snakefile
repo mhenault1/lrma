@@ -1,0 +1,28 @@
+from pandas import read_csv
+from os.path import isfile
+
+ns = read_csv('/mnt/HDD3/lrma/script/ns_subg.csv', index_col=0)
+ns = ns.loc[ns['identity_filter']]
+
+def get_out_bed(S):
+    return [f'/mnt/HDD3/lrma/reverse_liftover/{s}.flank_lift.bed' for s in S]
+
+def get_in_bed(S):
+    L = []
+    for s in S:
+        subg = ns.loc[s, 'subg']
+        L.append(f'/mnt/HDD3/lrma/reverse_liftover/{subg}.flank.bed')
+    return L
+
+rule all:
+    input:
+        get_out_bed(ns.index)
+
+rule liftover:
+    input:
+        aln='/mnt/HDD3/lrma/minimap_aln/ref.{s}.paf',
+        bed=get_in_bed
+    output:
+        '/mnt/HDD3/lrma/reverse_liftover/{s}.flank_lift.bed'
+    shell:
+        'paftools liftover {input.aln} {input.bed} > {output}'

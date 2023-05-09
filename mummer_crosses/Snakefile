@@ -1,0 +1,30 @@
+from pandas import read_csv
+
+cp = read_csv('/mnt/HDD3/lrma/mummer_crosses/cross_parents.txt', index_col=0)
+
+def get_parent1(C):
+    return [f'/mnt/HDD1/paradoxus_nanopore/MA_parents/assemblies/{cp.loc[c, "parent1"]}.chromosomes.fasta' for c in C]
+
+def get_parent2(C):
+    return [f'/mnt/HDD1/paradoxus_nanopore/MA_parents/assemblies/{cp.loc[c, "parent2"]}.chromosomes.fasta' for c in C]
+
+rule all:
+    input:
+        expand('/mnt/HDD3/lrma/mummer_crosses/{c}.coords', c=cp.index)
+
+rule nucmer:
+    params:
+        p1 = get_parent1,
+        p2 = get_parent2
+    output:
+        '/mnt/HDD3/lrma/mummer_crosses/{s}.delta'
+    shell:
+        'nucmer --mum --delta={output} {params.p1} {params.p2}'
+
+rule show_coords:
+    input:
+        '/mnt/HDD3/lrma/mummer_crosses/{s}.delta'
+    output:
+        '/mnt/HDD3/lrma/mummer_crosses/{s}.coords'
+    shell:
+        'show-coords -drTH {input} > {output}'

@@ -1,0 +1,25 @@
+
+from pandas import read_csv
+
+ns = read_csv('/mnt/HDD3/lrma/script/ns_subg.csv', index_col=0)
+ns = ns.loc[ns['identity_filter']]
+
+# define functions for use as input/params
+def get_fastq(S):
+    return [ns.loc[s, 's_subg'] for s in S]
+
+rule all:
+    input:
+        expand('/mnt/HDD3/lrma/minimap_misassembly/{s}.consensus.minimap.bam', s=ns.index)
+
+rule minimap:
+    input:
+        reads = '/mnt/HDD3/lrma/sort/{s}.reads.fastq',
+        draft = '/mnt/HDD3/lrma/medaka/{s}/consensus.fasta'
+    output:
+        '/mnt/HDD3/lrma/minimap_misassembly/{s}.consensus.minimap.bam'
+    threads: 2
+    shell: #filter out secondary alignments
+        'minimap2 -x map-ont -t {threads} -a {input.draft} {input.reads} | samtools sort -@ 1 -T tmp.{wildcards.s} | samtools view -F260 -o {output}; '
+        'samtools index {output}; '
+        'samtools stats {output} > {wildcards.s}.consensus.minimap.stats'

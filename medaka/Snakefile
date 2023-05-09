@@ -1,0 +1,38 @@
+
+from pandas import read_csv
+ns = read_csv('/mnt/HDD3/lrma/script/ns_subg.csv', index_col=0)
+ns = ns.loc[ns['identity_filter']]
+
+rule all:
+    input:
+#        expand('/mnt/HDD3/lrma/medaka/{s}/consensus.fasta', s=ns.index)
+        expand('/mnt/HDD3/lrma/medaka/{s}/{s}.delta', s=ns.index)
+
+rule medaka_consensus:
+    input:
+        draft='/mnt/HDD3/lrma/wtdbg2/{s}/{s}.cns.fa',
+        reads='/mnt/HDD3/lrma/sort/{s}.reads.fastq'
+    params:
+        outdir='/mnt/HDD3/lrma/medaka/{s}/'
+    conda:
+        '/mnt/HDD3/lrma/envs/medaka.yml'
+    output:
+        '/mnt/HDD3/lrma/medaka/{s}/consensus.fasta'
+    shell:
+        'if [ ! -d {params.outdir} ]; then mkdir {params.outdir}; fi; '
+        'medaka_consensus -i {input.reads} -d {input.draft} -o {params.outdir} -m r941_min_high_g303; '
+        'exitcode1=$?; '
+        'echo {output}; '
+        'exitcode2=$?; '
+        'echo $exitcode1 $exitcode2 > {params.outdir}/exitcodes.txt'
+
+rule dnadiff:
+    input:
+        ref='/mnt/HDD3/lrma/wtdbg2/{s}/{s}.cns.fa',
+        query='/mnt/HDD3/lrma/medaka/{s}/consensus.fasta'
+    output:
+        '/mnt/HDD3/lrma/medaka/{s}/{s}.delta'
+    shell:
+        'cd /mnt/HDD3/lrma/medaka/{wildcards.s}; '
+        'dnadiff -p {wildcards.s} {input.ref} {input.query}'
+

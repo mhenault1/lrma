@@ -1,0 +1,31 @@
+from pandas import read_csv, concat
+from numpy import int32
+
+#parse lines subgenomes
+ns_subg = read_csv('/mnt/HDD3/lrma/script/ns_subg.csv', index_col=0)
+ns_subg = ns_subg.loc[ns_subg['identity_filter']]
+#parse parental genomes
+nano_strains = read_csv('/mnt/HDD3/lrma/script/nano_strains.csv', index_col=0)
+nano_strains = nano_strains.loc[nano_strains['cross']=='P']
+nano_strains['ploidy_subg'] = 1
+
+ns = concat([ns_subg['ploidy_subg'], nano_strains['ploidy_subg']]).astype(int32)
+
+def get_ploidy_subg(S):
+    return [ns.loc[s] for s in S]
+
+rule all:
+    input:
+        expand('/mnt/HDD3/lrma/depth_tracts/{s}.tracts.csv', s=ns.index)
+# s=list(ns_subg.index)+list(ns.index))
+
+rule make_tracts:
+    input:
+        '/mnt/HDD3/lrma/depth/{s}.fil.depth.gz'
+    params:
+        cn = get_ploidy_subg
+    output:
+        '/mnt/HDD3/lrma/depth_tracts/{s}.tracts.csv'
+    shell:
+        './make_tracts.py {wildcards.s} {params.cn}'
+

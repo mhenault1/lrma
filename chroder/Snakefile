@@ -1,0 +1,48 @@
+from pandas import read_csv
+
+ns = read_csv('/mnt/HDD3/lrma/script/ns_subg.csv', index_col=0)
+ns = ns.loc[ns['identity_filter']]
+
+def get_subg(S):   
+    return [ns.loc[s, 'ref_chroder'] for s in S]
+
+rule all:
+    input:
+        expand('/mnt/HDD3/lrma/chroder/{s}.chroder.fil.coords', s=ns['s_subg'].values)
+
+rule chroder:
+    input:
+        polished='/mnt/HDD3/lrma/medaka/{s}/consensus.fasta',
+        coords='/mnt/HDD3/lrma/mummer_draft/{s}.draft.coords',
+        ref=get_subg
+    output:
+        '/mnt/HDD3/lrma/chroder/{s}.chroder.qry.fasta'
+    shell:
+        'export PATH_TO_CHRODER=/home/mathieu/software/syri/syri/bin/chroder; '
+        'python3 $PATH_TO_CHRODER -o {wildcards.s}.chroder -n 8 {input.coords} {input.ref} {input.polished}; '
+        'if [ ! -f {output} ]; then touch {output}; fi'
+
+rule nucmer:
+    input:
+        chroder='/mnt/HDD3/lrma/chroder/{s}.chroder.qry.fasta',
+        ref=get_subg
+    output:
+        '/mnt/HDD3/lrma/chroder/{s}.chroder.delta'
+    shell:
+        'nucmer --maxmatch -c 100 -b 500 -l 50 --delta={output} {input.ref} {input.chroder}'
+
+rule delta_filter:
+    input:
+        '/mnt/HDD3/lrma/chroder/{s}.chroder.delta'
+    output:
+        '/mnt/HDD3/lrma/chroder/{s}.chroder.fil.delta'
+    shell:
+        'delta-filter -m -i 80 -l 100 {input} > {output}'
+
+rule show_coords:
+    input:
+        '/mnt/HDD3/lrma/chroder/{s}.chroder.fil.delta'
+    output:
+        '/mnt/HDD3/lrma/chroder/{s}.chroder.fil.coords'
+    shell:
+        'show-coords -drTH {input} > {output}'

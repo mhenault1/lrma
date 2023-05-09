@@ -1,0 +1,23 @@
+
+from pandas import read_csv
+ns = read_csv('/mnt/HDD3/lrma/script/nano_strains.csv', index_col=0)
+
+# define functions for use as input/params
+def get_fastq(S):
+    return [ns.loc[s, 'path'] for s in S]
+
+rule all:
+    input:
+        expand('/mnt/HDD3/lrma/minimap_sort/{s}.sort.minimap.bam', s=ns.index)
+
+rule minimap:
+    input:
+        '/mnt/HDD3/lrma/minimap_sort/.input.{s}'
+    params:
+        reads=get_fastq
+    output:
+        '/mnt/HDD3/lrma/minimap_sort/{s}.sort.minimap.bam'
+    shell: #filter out secondary alignments
+        'minimap2 -x map-ont -t 2 -a /mnt/HDD3/lrma/minimap_sort/ref.fasta {params.reads} | samtools sort -@ 1 -T tmp.{wildcards.s} | samtools view -F260 -o {output}; '
+        'samtools index {output}; '
+        'samtools stats {output} > {wildcards.s}.sort.minimap.stats'

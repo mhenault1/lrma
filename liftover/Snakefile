@@ -1,0 +1,25 @@
+from pandas import read_csv
+from os.path import isfile
+
+ns = read_csv('/mnt/HDD3/lrma/script/ns_subg.csv', index_col=0)
+ns = ns.loc[ns['identity_filter']]
+
+def get_bed(S):
+    L = []
+    for s in S:
+        if isfile(f'/mnt/HDD3/lrma/RepeatMasker/{s}/REannotate_output/{s}.bed'):
+            L.append(f'/mnt/HDD3/lrma/liftover/{s}.lift.bed')
+    return L
+
+rule all:
+    input:
+        get_bed(ns.index)
+
+rule liftover:
+    input:
+        aln='/mnt/HDD3/lrma/minimap_aln/{s}.ref.paf',
+        bed='/mnt/HDD3/lrma/RepeatMasker/{s}/REannotate_output/{s}.bed'
+    output:
+        '/mnt/HDD3/lrma/liftover/{s}.lift.bed'        
+    shell:
+        'paftools liftover {input.aln} {input.bed} > {output}'

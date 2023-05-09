@@ -1,0 +1,30 @@
+from pandas import read_csv
+
+ns = read_csv('/mnt/HDD3/lrma/script/ns_subg.csv', index_col=0)
+
+def get_subg(S):
+    return [ns.loc[s, 'ref_chroder'] for s in S]
+
+
+rule all:
+    input:
+        expand('/mnt/HDD3/lrma/mummer_draft/{s}.draft.coords', s=ns['s_subg'].values)
+
+rule nucmer:
+    input:
+        draft='/mnt/HDD3/lrma/wtdbg2/{s}/{s}.cns.fa',
+        polished='/mnt/HDD3/lrma/medaka/{s}/consensus.fasta'
+    params:
+        qm = get_subg
+    output:
+        '/mnt/HDD3/lrma/mummer_draft/{s}.draft.delta'
+    shell:
+        'nucmer --mum --delta={output} {params.qm} {input.polished}'
+
+rule show_coords:
+    input:
+        '/mnt/HDD3/lrma/mummer_draft/{s}.draft.delta'
+    output:
+        '/mnt/HDD3/lrma/mummer_draft/{s}.draft.coords'
+    shell:
+        'show-coords -drTH {input} > {output}'

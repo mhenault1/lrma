@@ -1,0 +1,35 @@
+from pandas import read_csv
+
+ns = read_csv('/mnt/HDD3/lrma/script/ns_subg.csv', index_col=0)
+ns = ns.loc[ns['identity_filter']]
+
+def get_subg(S):
+    return [f'/home/mathieu/paradoxus_nanopore/MA_parents/assemblies/{ns.loc[s,"subg"]}.chromosomes.rdna.fasta' for s in S]
+
+
+rule all:
+    input:
+        expand('/mnt/HDD3/lrma/minimap_aln/{s}.ref.paf', s=ns['s_subg'].values) +\
+        expand('/mnt/HDD3/lrma/minimap_aln/ref.{s}.paf', s=ns['s_subg'].values)
+
+rule minimap:
+    input:
+        draft='/mnt/HDD3/lrma/medaka/{s}/consensus.fasta'
+    params:
+        ref = get_subg
+    output:
+        '/mnt/HDD3/lrma/minimap_aln/{s}.ref.paf'
+    shell:
+        'minimap2 -cx asm10 -o {output} {params.ref} {input.draft}'
+        
+
+rule rev_minimap:
+    input:
+        draft='/mnt/HDD3/lrma/medaka/{s}/consensus.fasta'
+    params:
+        ref = get_subg
+    output:
+        '/mnt/HDD3/lrma/minimap_aln/ref.{s}.paf'
+    shell:
+        'minimap2 -cx asm10 -o {output} {input.draft} {params.ref}'
+        

@@ -1,0 +1,40 @@
+from pandas import read_csv
+
+ns = read_csv('/mnt/HDD3/lrma/script/ns_subg.csv', index_col=0)
+ns = ns.loc[ns['identity_filter']]
+
+def get_subg(S):
+    return [f'/home/mathieu/paradoxus_nanopore/MA_parents/assemblies/{ns.loc[s,"subg"]}.chromosomes.rdna.fasta' for s in S]
+
+rule all:
+    input:
+        expand('/mnt/HDD3/lrma/depth/{s}.fil.depth.gz', s=ns.index)
+
+rule minimap:
+    input:
+        reads = '/mnt/HDD3/lrma/sort/{s}.reads.fastq',
+        ref = get_subg
+    output:
+        temp('/mnt/HDD3/lrma/depth/{s}.bam')
+    shell:
+        'minimap2 -x map-ont -a {input.ref} {input.reads} | samtools sort -T {wildcards.s} -o {output}; '
+        'samtools index {output}'
+
+rule samtools_view:
+    input:
+        '/mnt/HDD3/lrma/depth/{s}.bam'
+    output:
+        temp('/mnt/HDD3/lrma/depth/{s}.fil.bam')
+    shell:
+        'samtools view -F256 -o {output} {input}'
+
+rule samtools_depth:
+    input:
+        '/mnt/HDD3/lrma/depth/{s}.fil.bam'
+    params:
+        unzip_depth='/mnt/HDD3/lrma/depth/{s}.fil.depth'
+    output:
+        zip_depth='/mnt/HDD3/lrma/depth/{s}.fil.depth.gz'
+    shell:
+        'samtools depth {input} > {params.unzip_depth}; '
+        'gzip {params.unzip_depth}'
