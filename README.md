@@ -4,7 +4,8 @@ Scripts and data for the analysis of transposable elements in hybrid yeast mutat
 
 ## Main scripts 
 
-
+### rates.ipynb
+Analysis of Ty1 transposition fluctuation assays
 ### sort_reads.ipynb
 Sorting of long-read libraries into subgenomes
 ### sv.ipynb
